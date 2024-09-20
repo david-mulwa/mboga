@@ -1,70 +1,111 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { View, Text, SafeAreaView, Image, ScrollView, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import '../../global.css';
+import { UserIcon, ChevronDownIcon, MagnifyingGlassIcon, AdjustmentsHorizontalIcon } from 'react-native-heroicons/outline';
+import Categories from '@/components/Categories';
+import FeaturedRow from '@/components/FeaturedRow';
+import client from '@/sanity';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+// Define a type for the data you expect to receive from Sanity
+type Restaurant = {
+  _id: string;
+  name: string;
+  short_description: string;
+  dishes: any[]; // Define this properly if needed
+};
 
-export default function HomeScreen() {
+type FeaturedCategory = {
+  _id: string;
+  name: string;
+  short_description: string;
+  restaurants: Restaurant[];
+};
+
+const Index = () => {
+  const [featuredCategories, setFeaturedCategories] = useState<FeaturedCategory[]>([]); // Use the defined type
+  const [loading, setLoading] = useState(true); // Add loading state
+
+  useEffect(() => {
+    client
+      .fetch(
+        `*[_type == "featured"]{
+          _id,
+          name,
+          short_description,
+          restaurants[]->{
+            _id,
+            name,
+            short_description,
+            dishes[]->{
+              name,
+              price,
+              image
+            }
+          }
+        }`
+      )
+      .then((data) => {
+        setFeaturedCategories(data);
+        setLoading(false); // Set loading to false once data is fetched
+      })
+      .catch((error) => {
+        console.error('Error fetching featured categories:', error);
+        setLoading(false);
+      });
+  }, []);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
+    <SafeAreaView className="flex-1 bg-white">
+      <View className="flex-row items-center pb-3 mx-4 space-x-2 mt-12">
         <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+          source={{
+            uri: 'https://links.papareact.com/wru',
+          }}
+          className="h-7 w-7 bg-gray-300 rounded-full"
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
-}
+        <View className="flex-1">
+          <Text className="font-bold text-gray-400 text-xs">Deliver Now!</Text>
+          <Text className="font-bold text-xl">
+            Current Location
+            <ChevronDownIcon size={20} color="#00CC88" />
+          </Text>
+        </View>
+        <UserIcon size={35} color="#00CC88" />
+      </View>
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+      {/* Search bar */}
+      <View className="flex-row items-center space-x-2 mx-4">
+        <View className="flex-row space-x-2 flex-1 bg-gray-200 p-3">
+          <MagnifyingGlassIcon size={20} color="gray" />
+          <TextInput placeholder="Restaurants and cuisines" keyboardType="default" />
+        </View>
+        <AdjustmentsHorizontalIcon size={30} color="#00CC88" />
+      </View>
+
+      {/* Scrollable content */}
+      <ScrollView className="bg-gray-100" contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Categories */}
+        <Categories />
+
+        {/* Featured rows */}
+        {loading ? (
+          <Text className="text-center text-lg font-bold">Loading...</Text>
+        ) : (
+          featuredCategories?.map((category) => (
+            <FeaturedRow
+              key={category._id}
+              id={category._id}
+              title={category.name}
+              description={category.short_description}
+            />
+          ))
+        )}
+
+        {/* Predefined FeaturedRow examples */}
+        
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+export default Index;
